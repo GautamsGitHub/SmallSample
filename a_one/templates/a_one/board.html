@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		.skey {
+			background-color: aliceblue;
+		}
+
+		.skey:hover {
+			background-color: aqua;
+		}
+	</style>
+	<meta charset="utf-8">
+	<title>Board</title>
+</head>
+<body>
+	<input type="text" id="write-chat">
+	<input type="submit" id="submit-chat" value="send chat">
+	<br>
+	<textarea id="board-text" readonly="true">Chat</textarea>
+	<br>
+	<h1>Testing</h1>
+	<button class="skey" id="b1">Sound 1</button>
+	<button class="skey" id="b2">Sound 2</button><br>
+	<button class="skey" id="b3">Sound 3</button>
+	<button class="skey" id="b4">Sound 4</button>
+
+	{{ board_number|json_script:"board-number" }}
+	
+	<script type="text/javascript">
+		
+		const boardNumber = JSON.parse(document.getElementById('board-number').textContent);
+
+		const boardSocket = new WebSocket('ws://'+window.location.host+'/ws/a_one/'+boardNumber+'/');
+
+		const audio_context = new AudioContext();
+
+		const numToFreq = {1:[0,262], 2:[1,294], 3:[0,349], 4:[1,392]};
+
+		boardSocket.onmessage = function(e) {
+			const data = JSON.parse(e.data);
+			if (data.message == "chat") {
+				document.getElementById('board-text').value = data.freshChat;
+			} else if (data.message == "sound"){
+				if (data.freshSound[1]){
+					playSound(data.freshSound[0]);
+				} else {
+					stopSound(data.freshSound[0]);
+				}
+			}
+		};
+
+		boardSocket.onclose = function(e) {
+			console.error("socket closed");
+		};
+
+		for (let i = 1; i < 5; i++) {
+			let boardI = document.getElementById("b"+ i);
+			boardI.onmousedown = function(){
+				boardI.style.backgroundColor = "moccasin";
+				boardSocket.send(JSON.stringify({'freshMessage':'sound', 'freshSound':[i, true]}));
+			}
+			boardI.onmouseup = function(){
+				boardI.style.backgroundColor = "aliceblue";
+				boardSocket.send(JSON.stringify({'freshMessage':'sound', 'freshSound':[i, false]}));
+			}
+			boardI.onmouseout = function(){
+				boardI.style.backgroundColor = "aliceblue";
+				boardSocket.send(JSON.stringify({'freshMessage':'sound', 'freshSound':[i, false]}));
+			}
+		}
+
+		document.getElementById('write-chat').onkeyup = function(e) {
+	        if (e.code == "Enter") {
+	        	document.getElementById('submit-chat').click();
+			}
+	    };
+
+        document.getElementById('submit-chat').onclick = function(e) {
+			var freshChat = document.getElementById('write-chat').value;
+			boardSocket.send(JSON.stringify({'freshMessage':'chat', 'freshChat':freshChat}));
+			document.getElementById('write-chat').value = '';
+        };
+
+		document.addEventListener('keydown', function(event){
+			if (event.code == 'KeyA'){
+				document.getElementById('b1').onmousedown(event);
+			} else if (event.code == 'KeyS'){
+				document.getElementById('b2').onmousedown(event);
+			} else if (event.code == 'KeyZ'){
+				document.getElementById('b3').onmousedown(event);
+			} else if (event.code == 'KeyX'){
+				document.getElementById('b4').onmousedown(event);
+			}
+		});
+
+		document.addEventListener('keyup', function(event){
+			if (event.code == 'KeyA'){
+				document.getElementById('b1').onmouseup();
+			} else if (event.code == 'KeyS'){
+				document.getElementById('b2').onmouseup();
+			} else if (event.code == 'KeyZ'){
+				document.getElementById('b3').onmouseup();
+			} else if (event.code == 'KeyX'){
+				document.getElementById('b4').onmouseup();
+			}
+		});
+
+		var band = [];
+		for (let i=0; i<4; i++){
+			var oscillator = audio_context.createOscillator();
+			oscillator.connect(audio_context.destination);
+			oscillator.playingNow = false;
+			band[i] = oscillator;
+		}
+
+		function playSound(soundNumber){
+			var n = numToFreq[soundNumber][0]
+			band[n].frequency.value = numToFreq[soundNumber][1];
+			if (!band[n].playingNow){
+				band[n].start();
+				band[n].playingNow = true;
+			}
+		}
+
+		function stopSound(soundNumber){
+			var n = numToFreq[soundNumber][0]
+			if(band[n].playingNow){
+				band[n].stop();
+				band[n] = audio_context.createOscillator();
+				band[n].connect(audio_context.destination);
+				band[n].playingNow = false;
+			}
+		}
+
+	</script>
+
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Test A1</title>
+</head>
+<body>
+
+	Where would you like to go
+	<input type="text" id="where-to-go">
+	<input type="submit" id="submit-to-go" value="GO">
+
+	<script type="text/javascript">
+		
+		document.getElementById('where-to-go').focus();
+		document.getElementById('where-to-go').onkeyup = function(e) {
+	        if (e.code == "Enter") {
+	        	document.getElementById('submit-to-go').click();
+			}
+	    };
+
+        document.getElementById('submit-to-go').onclick = function(e) {
+			var goTo = document.getElementById('where-to-go').value;
+			window.location.pathname = '/a_one/' + goTo + '/';
+        };
+
+	</script>
+
+</body>
+</html>
